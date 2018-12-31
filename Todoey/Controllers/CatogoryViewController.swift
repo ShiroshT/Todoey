@@ -7,13 +7,16 @@
 //
 
 import UIKit
-import CoreData
+//import CoreData
+import RealmSwift
 
 class CatogoryViewController: UITableViewController {
 
-    var categoryArrey =  [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    let realm = try! Realm()
     
+//    var categoryArrey =  [Category]()
+    var categoryArrey: Results<Category>? /* RESULTS is coming from REALEM */
+
     override func viewDidLoad() {
         super.viewDidLoad()
         loadCategory()
@@ -25,15 +28,15 @@ class CatogoryViewController: UITableViewController {
      //MARK: - TableView DataSource Methods - both of these are oblegatory
 -----------------------------------------------------------------*/
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArrey.count
+        return categoryArrey?.count ?? 1 /*NIL COALESING OPERATOR*/
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CatogoryCell", for: indexPath)
 
-        let category = categoryArrey[indexPath.row]
+        cell.textLabel?.text = categoryArrey?[indexPath.row].name ??  "No Catergories added yet"
 
-        cell.textLabel?.text = category.name
+//        cell.textLabel?.text = category.name
 
         return cell
     }
@@ -56,7 +59,7 @@ class CatogoryViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArrey[indexPath.row]
+            destinationVC.selectedCategory = categoryArrey?[indexPath.row]
         }
     }
 
@@ -74,12 +77,11 @@ class CatogoryViewController: UITableViewController {
         
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             
-            let newCategory = Category(context: self.context)
+            let newCategory = Category()
             
             newCategory.name = textField.text!
-            self.categoryArrey.append(newCategory)
-            self.saveCategory()
-           
+//            self.categoryArrey.append(newCategory)
+            self.save(category: newCategory)
         }
         
         /* THere is a problem here*/
@@ -92,7 +94,7 @@ class CatogoryViewController: UITableViewController {
         
         
         present(alert, animated: true, completion: nil)
-        loadCategory()
+//        loadCategory()
         
         
     }
@@ -104,10 +106,12 @@ class CatogoryViewController: UITableViewController {
      //MARK: -  Model Manupilation Method
      ****************************************************************** */
     // Create data -
-    func saveCategory() {
+    func save(category: Category) {
         //        let encorder = PropertyListEncoder()
         do {
-            try context.save() /* this is coming from the Core data - App delegate end*/
+            try realm.write {
+                realm.add(category)
+            } /* this is coming from the Core data - App delegate end*/
         } catch {
             print("Error Saving Contex \(error)")
         }
@@ -118,17 +122,13 @@ class CatogoryViewController: UITableViewController {
     
     //    Load data - Read data - below -Internal  and external values are set
     
-    func loadCategory(with request: NSFetchRequest<Category> = Category.fetchRequest()){
-        //        let request : NSFetchRequest<Item> = Item.fetchRequest() /* here - have to sepcify the data type */
+    func loadCategory(){
         
-        do {
-            categoryArrey = try context.fetch(request)
-        } catch {
-            print ("Error printing \(error)")
-        }
+        categoryArrey = realm.objects(Category.self)
+        
         
         tableView.reloadData()
-        
+
     }
     
     
